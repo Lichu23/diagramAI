@@ -1,14 +1,11 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ReactFlow,
   Background,
   BackgroundVariant,
   Controls,
   MiniMap,
-  Panel,
   useReactFlow,
-  getNodesBounds,
-  getViewportForBounds,
   type Node,
   type Edge,
   type NodeChange,
@@ -18,8 +15,6 @@ import {
 } from '@xyflow/react';
 import type { LayoutDir } from './NodeEditContext';
 import '@xyflow/react/dist/style.css';
-import { toPng } from 'html-to-image';
-import { Download } from 'lucide-react';
 import StartNode from './nodes/StartNode';
 import EndNode from './nodes/EndNode';
 import ActionNode from './nodes/ActionNode';
@@ -38,8 +33,6 @@ const nodeTypes: NodeTypes = {
 const edgeTypes: EdgeTypes = {
   animated: AnimatedEdge,
 };
-
-const EXPORT_PADDING = 80;
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
@@ -62,50 +55,6 @@ function FitViewOnLayout({ layoutVersion }: { layoutVersion: number }) {
   return null;
 }
 
-function ExportButton() {
-  const { getNodes } = useReactFlow();
-
-  const handleExport = useCallback(() => {
-    const nodes = getNodes();
-    if (nodes.length === 0) return;
-
-    const bounds = getNodesBounds(nodes);
-    const imageWidth = Math.max(800, Math.round(bounds.width + EXPORT_PADDING * 2));
-    const imageHeight = Math.max(600, Math.round(bounds.height + EXPORT_PADDING * 2));
-    const viewport = getViewportForBounds(bounds, imageWidth, imageHeight, 0.1, 4, 0);
-
-    const viewportEl = document.querySelector('.react-flow__viewport') as HTMLElement | null;
-    if (!viewportEl) return;
-
-    toPng(viewportEl, {
-      backgroundColor: '#030712',
-      width: imageWidth,
-      height: imageHeight,
-      style: {
-        width: `${imageWidth}px`,
-        height: `${imageHeight}px`,
-        transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
-      },
-    }).then((dataUrl: string) => {
-      const a = document.createElement('a');
-      a.download = 'flow-diagram.png';
-      a.href = dataUrl;
-      a.click();
-    });
-  }, [getNodes]);
-
-  return (
-    <Panel position="top-right">
-      <button
-        onClick={handleExport}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-300 hover:text-white bg-gray-900 border border-gray-700 hover:border-gray-500 rounded transition-colors"
-      >
-        <Download size={12} />
-        Export PNG
-      </button>
-    </Panel>
-  );
-}
 
 interface FlowDiagramProps {
   nodes: Node[];
@@ -169,7 +118,6 @@ export function FlowDiagram({
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#ffffff10" />
         <Controls />
         {!isMobile && <MiniMap nodeColor={miniMapNodeColor} maskColor="rgba(0,0,0,0.4)" />}
-        <ExportButton />
         <FitViewOnLayout layoutVersion={layoutVersion} />
       </ReactFlow>
     </div>

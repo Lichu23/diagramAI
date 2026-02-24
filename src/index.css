@@ -1,5 +1,19 @@
 @import "tailwindcss";
 
+:root {
+  --sidebar-width: 18rem;
+  --sidebar-width-mobile: 18rem;
+  --sidebar-width-icon: 3rem;
+  --sidebar-background: oklch(8% 0 0);
+  --sidebar-foreground: oklch(95% 0 0);
+  --sidebar-border: oklch(18% 0 0);
+  --sidebar-accent: oklch(15% 0 0);
+  --sidebar-accent-foreground: oklch(95% 0 0);
+  --sidebar-ring: oklch(60% 0.2 250);
+  --sidebar-primary: oklch(95% 0 0);
+  --sidebar-primary-foreground: oklch(8% 0 0);
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -8,6 +22,36 @@ html, body, #root {
   height: 100%;
   margin: 0;
   padding: 0;
+}
+
+/* ── React Flow dark theme overrides ───────────────────────────── */
+.react-flow__controls {
+  --xy-controls-button-background-color-default: #111827;
+  --xy-controls-button-background-color-hover-default: #1f2937;
+  --xy-controls-button-color-default: #9ca3af;
+  --xy-controls-button-color-hover-default: #f9fafb;
+  --xy-controls-button-border-color-default: #374151;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #374151;
+}
+
+.react-flow__controls-button svg {
+  fill: currentColor;
+  max-width: 12px;
+  max-height: 12px;
+}
+
+.react-flow__minimap {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #374151;
+}
+
+/* ── React Flow attribution (hide default branding) ─────────── */
+.react-flow__attribution {
+  display: none;
 }
 
 @keyframes dash {

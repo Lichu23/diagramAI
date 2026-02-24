@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { type Node, type Edge } from '@xyflow/react';
+import { type Node, type Edge, getNodesBounds, getViewportForBounds } from '@xyflow/react';
+import { toPng } from 'html-to-image';
 import { toast, Toaster } from 'sonner';
 import { useFlowGenerator } from './hooks/useFlowGenerator';
 import { useFlowHistory } from './hooks/useFlowHistory';
 import { useSimulation } from './hooks/useSimulation';
 import { useUndoRedo } from './hooks/useUndoRedo';
-import { FlowEditor } from './components/FlowEditor';
+import { AppSidebar } from './components/AppSidebar';
 import { FlowDiagram } from './components/FlowDiagram';
+import { PromptBar } from './components/PromptBar';
 import { FlowHistory } from './components/FlowHistory';
-import { Toolbar } from './components/Toolbar';
+import { SidebarProvider, SidebarInset, SidebarTrigger } from './components/ui/sidebar';
 import { exportJSON, exportMermaid } from './utils/exportFlow';
 import { compressGraph, decompressGraph } from './utils/urlShare';
 import type { FlowGraph } from './services/groq';
@@ -28,7 +30,6 @@ function App() {
   const undoRedo = useUndoRedo<FlowSnapshot>();
 
   const [prompt, setPrompt] = useState('');
-  const [editorCollapsed, setEditorCollapsed] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
 
   // --- Feature 1: Load diagram from URL on mount ---
@@ -79,7 +80,7 @@ function App() {
     return () => document.removeEventListener('keydown', handler);
   }, [handleUndo, handleRedo]);
 
-  // --- Action handlers (push snapshot before mutation for clear/load) ---
+  // --- Action handlers ---
   const handleClear = () => {
     undoRedo.push({ nodes, edges, rawGraph, prompt });
     clear();
@@ -107,6 +108,32 @@ function App() {
   const handleExportJSON = () => { if (rawGraph) exportJSON(rawGraph); };
   const handleExportMermaid = () => { if (rawGraph) exportMermaid(rawGraph); };
 
+  const handleExportPng = useCallback(() => {
+    if (nodes.length === 0) return;
+    const EXPORT_PADDING = 40;
+    const bounds = getNodesBounds(nodes);
+    const imageWidth  = Math.max(800, Math.round(bounds.width  + EXPORT_PADDING * 2));
+    const imageHeight = Math.max(600, Math.round(bounds.height + EXPORT_PADDING * 2));
+    const viewport = getViewportForBounds(bounds, imageWidth, imageHeight, 0.1, 4, 0);
+    const viewportEl = document.querySelector('.react-flow__viewport') as HTMLElement | null;
+    if (!viewportEl) return;
+    toPng(viewportEl, {
+      backgroundColor: '#030712',
+      width: imageWidth,
+      height: imageHeight,
+      style: {
+        width: `${imageWidth}px`,
+        height: `${imageHeight}px`,
+        transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
+      },
+    }).then((dataUrl: string) => {
+      const a = document.createElement('a');
+      a.download = 'flow-diagram.png';
+      a.href = dataUrl;
+      a.click();
+    });
+  }, [nodes]);
+
   // --- Feature 1: Copy shareable link ---
   const handleCopyLink = async () => {
     if (!rawGraph) return;
@@ -128,59 +155,60 @@ function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-950 text-white">
+    <SidebarProvider>
       <Toaster theme="dark" position="bottom-right" richColors />
 
-      <header className="px-4 sm:px-6 py-3 border-b border-gray-800 flex items-center gap-3 shrink-0">
-        <h1 className="text-base sm:text-lg font-semibold text-white">AI Flow Creator</h1>
-        <span className="hidden sm:inline text-xs text-gray-500">Describe a process, get a diagram</span>
-      </header>
-
-      <div className="shrink-0">
-        {!editorCollapsed && (
-          <FlowEditor
-            prompt={prompt}
-            onPromptChange={setPrompt}
-            onGenerate={generate}
-            loading={loading}
-          />
-        )}
-        <Toolbar
-          onClear={handleClear}
-          hasNodes={nodes.length > 0}
-          editorCollapsed={editorCollapsed}
-          onToggleEditor={() => setEditorCollapsed(c => !c)}
-          onSave={handleSave}
-          savedCount={flows.length}
-          onToggleHistory={() => setHistoryOpen(o => !o)}
-          direction={direction}
-          onToggleDirection={toggleDirection}
-          simulationStatus={simulation.status}
-          onSimulate={simulation.start}
-          onSimulationPause={simulation.pause}
-          onSimulationResume={simulation.resume}
-          canUndo={undoRedo.canUndo}
-          canRedo={undoRedo.canRedo}
-          onUndo={handleUndo}
-          onRedo={handleRedo}
-          hasGraph={rawGraph !== null}
-          onCopyLink={handleCopyLink}
-          onExportJSON={handleExportJSON}
-          onExportMermaid={handleExportMermaid}
-        />
-      </div>
-
-      <FlowDiagram
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodeLabelChange={handleNodeLabelChange}
-        loading={loading}
+      <AppSidebar
+        onClear={handleClear}
+        hasNodes={nodes.length > 0}
+        onSave={handleSave}
+        savedCount={flows.length}
+        onToggleHistory={() => setHistoryOpen(o => !o)}
         direction={direction}
-        layoutVersion={layoutVersion}
-        simulation={simulation}
+        onToggleDirection={toggleDirection}
+        simulationStatus={simulation.status}
+        onSimulate={simulation.start}
+        onSimulationPause={simulation.pause}
+        onSimulationResume={simulation.resume}
+        canUndo={undoRedo.canUndo}
+        canRedo={undoRedo.canRedo}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        hasGraph={rawGraph !== null}
+        onCopyLink={handleCopyLink}
+        onExportJSON={handleExportJSON}
+        onExportMermaid={handleExportMermaid}
+        onExportPng={handleExportPng}
       />
+
+      <SidebarInset className="flex flex-col">
+        <SidebarTrigger />
+        <div className="relative flex-1 min-h-0 flex flex-col">
+          <FlowDiagram
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onNodeLabelChange={handleNodeLabelChange}
+            loading={loading}
+            direction={direction}
+            layoutVersion={layoutVersion}
+            simulation={simulation}
+          />
+          {/* Floating prompt bar — absolutely positioned over canvas */}
+          <div className="absolute bottom-4 left-4 right-4 z-10 pointer-events-none">
+            <div className="pointer-events-auto max-w-3xl mx-auto">
+              <PromptBar
+                prompt={prompt}
+                onPromptChange={setPrompt}
+                onGenerate={generate}
+                loading={loading}
+                hasNodes={nodes.length > 0}
+              />
+            </div>
+          </div>
+        </div>
+      </SidebarInset>
 
       {historyOpen && (
         <FlowHistory
@@ -191,7 +219,7 @@ function App() {
           onClose={() => setHistoryOpen(false)}
         />
       )}
-    </div>
+    </SidebarProvider>
   );
 }
 
