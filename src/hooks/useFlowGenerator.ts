@@ -66,7 +66,69 @@ function computeLayout(
     };
   }
 
+  enforceYesOnRight({ nodes: rawNodes, edges: rawEdges }, positions, direction);
+
   return positions;
+}
+
+// Returns all node IDs reachable from startId without passing through excludeId.
+// Nodes shared by both yes and no subtrees (convergence points) are excluded
+// by the caller so they aren't moved by either branch.
+function getSubtree(graph: FlowGraph, startId: string, excludeId: string): Set<string> {
+  const visited = new Set<string>();
+  const queue = [startId];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    if (visited.has(id) || id === excludeId) continue;
+    visited.add(id);
+    for (const edge of graph.edges) {
+      if (edge.from === id) queue.push(edge.to);
+    }
+  }
+  return visited;
+}
+
+// After dagre layout, ensure the yes-branch subtree is always to the right of
+// the no-branch subtree (TB) or above it (LR) for every condition node.
+// If dagre placed them on the wrong side, we translate both subtrees to swap them.
+function enforceYesOnRight(
+  graph: FlowGraph,
+  positions: Record<string, { x: number; y: number }>,
+  direction: LayoutDirection,
+): void {
+  for (const node of graph.nodes) {
+    if (node.type !== 'condition') continue;
+
+    const outEdges = graph.edges.filter(e => e.from === node.id);
+    const yesEdge = outEdges.find(e => e.label?.toLowerCase() === 'yes');
+    const noEdge  = outEdges.find(e => e.label?.toLowerCase() === 'no');
+    if (!yesEdge || !noEdge) continue;
+
+    const yesRoot = positions[yesEdge.to];
+    const noRoot  = positions[noEdge.to];
+    if (!yesRoot || !noRoot) continue;
+
+    const axis = direction === 'TB' ? 'x' : 'y';
+    // TB: yes should have larger x (right). LR: yes should have smaller y (top).
+    const yesIsCorrect = direction === 'TB'
+      ? yesRoot.x >= noRoot.x
+      : yesRoot.y <= noRoot.y;
+    if (yesIsCorrect) continue;
+
+    const yesSubtree = getSubtree(graph, yesEdge.to, node.id);
+    const noSubtree  = getSubtree(graph, noEdge.to,  node.id);
+
+    // Don't move nodes where both branches converge.
+    for (const id of yesSubtree) { if (noSubtree.has(id)) { yesSubtree.delete(id); noSubtree.delete(id); } }
+
+    const delta = noRoot[axis] - yesRoot[axis];
+    for (const id of yesSubtree) {
+      positions[id] = { ...positions[id], [axis]: positions[id][axis] + delta };
+    }
+    for (const id of noSubtree) {
+      positions[id] = { ...positions[id], [axis]: positions[id][axis] - delta };
+    }
+  }
 }
 
 // Maps each condition edge to its handle using the edge label directly.
