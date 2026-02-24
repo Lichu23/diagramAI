@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { z, ZodError } from 'zod';
+import { checkAndRecord } from '../utils/rateLimit';
 
 const groq = new OpenAI({
   baseURL: 'https://api.groq.com/openai/v1',
@@ -93,6 +94,7 @@ function validateFlow(graph: FlowGraph): void {
 }
 
 export async function generateFlow(userPrompt: string): Promise<FlowGraph> {
+  checkAndRecord();
   const response = await groq.chat.completions.create({
     model: 'llama-3.3-70b-versatile',
     max_tokens: 1000,

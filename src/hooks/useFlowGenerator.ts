@@ -11,6 +11,7 @@ import {
 import dagre from '@dagrejs/dagre';
 import { toast } from 'sonner';
 import { generateFlow, type FlowNode, type FlowEdge, type FlowGraph } from '../services/groq';
+import { RateLimitError } from '../utils/rateLimit';
 
 export type LayoutDirection = 'TB' | 'LR';
 
@@ -129,6 +130,7 @@ function transformToReactFlow(
 }
 
 function getErrorMessage(error: unknown): string {
+  if (error instanceof RateLimitError) return error.message;
   if (error instanceof Error) {
     const msg = error.message;
     if ('status' in (error as unknown as object)) {
