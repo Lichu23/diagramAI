@@ -18,6 +18,8 @@ import type { SavedFlow } from './hooks/useFlowHistory';
 
 type FlowSnapshot = { nodes: Node[]; edges: Edge[]; rawGraph: FlowGraph | null; prompt: string };
 
+const SESSION_KEY = 'diagramai_session';
+
 function App() {
   const {
     nodes, edges, onNodesChange, onEdgesChange,
@@ -32,19 +34,46 @@ function App() {
   const [prompt, setPrompt] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  // --- Feature 1: Load diagram from URL on mount ---
+  // --- Feature 1: Load diagram from URL on mount, or restore last session ---
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const encoded = params.get('flow');
-    if (!encoded) return;
-    decompressGraph(encoded)
-      .then(graph => {
-        restoreFromGraph(graph);
-        const p = params.get('prompt');
-        if (p) setPrompt(decodeURIComponent(p));
-      })
-      .catch(() => toast.error('Could not load shared diagram'));
+    if (encoded) {
+      decompressGraph(encoded)
+        .then(graph => {
+          restoreFromGraph(graph);
+          const p = params.get('prompt');
+          if (p) setPrompt(decodeURIComponent(p));
+        })
+        .catch(() => toast.error('Could not load shared diagram'));
+      return;
+    }
+    // Fall back to last auto-saved session
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      if (!raw) return;
+      const session = JSON.parse(raw) as FlowSnapshot;
+      if (session.nodes?.length > 0) {
+        restore(session.nodes, session.edges, session.rawGraph ?? undefined);
+        if (session.prompt) setPrompt(session.prompt);
+      }
+    } catch {
+      // Corrupted session — ignore
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-save current session to localStorage (debounced 500ms)
+  useEffect(() => {
+    if (nodes.length === 0) return;
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ nodes, edges, rawGraph, prompt }));
+      } catch {
+        // Storage quota exceeded — ignore silently
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [nodes, edges, rawGraph, prompt]);
 
   // --- Feature 2: Push undo snapshot after successful generation ---
   const prevGenerationId = useRef(0);
@@ -84,6 +113,7 @@ function App() {
   const handleClear = () => {
     undoRedo.push({ nodes, edges, rawGraph, prompt });
     clear();
+    localStorage.removeItem(SESSION_KEY);
   };
 
   const handleNodeLabelChange = (id: string, label: string) => {
