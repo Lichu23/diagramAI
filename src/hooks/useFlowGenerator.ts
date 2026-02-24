@@ -204,7 +204,7 @@ export function useFlowGenerator() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [loading, setLoading] = useState(false);
-  const [direction, setDirection] = useState<LayoutDirection>('TB');
+  const [direction, setDirection] = useState<LayoutDirection>('LR');
   const [rawGraph, setRawGraph] = useState<FlowGraph | null>(null);
   const [layoutVersion, setLayoutVersion] = useState(0);
   const [generationId, setGenerationId] = useState(0);

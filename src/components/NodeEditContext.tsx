@@ -7,5 +7,5 @@ export const useNodeEdit = () => useContext(NodeEditContext);
 
 // Provides the current layout direction to node components.
 export type LayoutDir = 'TB' | 'LR';
-export const LayoutDirectionContext = createContext<LayoutDir>('TB');
+export const LayoutDirectionContext = createContext<LayoutDir>('LR');
 export const useLayoutDirection = () => useContext(LayoutDirectionContext);
