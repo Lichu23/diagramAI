@@ -86,16 +86,16 @@ export default function ConditionNode({ id, data }: NodeProps<FlowNode>) {
           <div className="absolute inset-0 bg-gray-950/60 rounded" />
           <div className="relative flex gap-2 z-10">
             <button
-              onClick={e => { e.stopPropagation(); sim.choose('yes'); }}
-              className="px-3 py-1 text-xs font-semibold bg-green-600 hover:bg-green-500 text-white rounded shadow-lg transition-colors"
-            >
-              Yes
-            </button>
-            <button
               onClick={e => { e.stopPropagation(); sim.choose('no'); }}
               className="px-3 py-1 text-xs font-semibold bg-red-600 hover:bg-red-500 text-white rounded shadow-lg transition-colors"
             >
               No
+            </button>
+            <button
+              onClick={e => { e.stopPropagation(); sim.choose('yes'); }}
+              className="px-3 py-1 text-xs font-semibold bg-green-600 hover:bg-green-500 text-white rounded shadow-lg transition-colors"
+            >
+              Yes
             </button>
           </div>
         </div>

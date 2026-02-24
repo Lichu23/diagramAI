@@ -40,7 +40,16 @@ function computeLayout(
     g.setNode(node.id, { width, height });
   }
 
-  for (const edge of rawEdges) {
+  // Sort so 'no' edges are added before 'yes' edges — dagre uses insertion
+  // order within a rank, which nudges the no-branch to the left consistently.
+  const sortedEdges = [...rawEdges].sort((a, b) => {
+    const aLabel = a.label?.toLowerCase() ?? '';
+    const bLabel = b.label?.toLowerCase() ?? '';
+    if (aLabel === 'no' && bLabel === 'yes') return -1;
+    if (aLabel === 'yes' && bLabel === 'no') return 1;
+    return 0;
+  });
+  for (const edge of sortedEdges) {
     const weight = edge.label?.toLowerCase() === 'yes' ? 2 : 1;
     g.setEdge(edge.from, edge.to, { weight });
   }
@@ -60,37 +69,17 @@ function computeLayout(
   return positions;
 }
 
-function buildConditionHandleMap(
-  graph: FlowGraph,
-  positions: Record<string, { x: number; y: number }>,
-  direction: LayoutDirection
-): Map<string, 'yes' | 'no'> {
+// Maps each condition edge to its handle using the edge label directly.
+// 'yes' → yes handle (Right in TB, Top in LR)
+// 'no'  → no handle  (Left in TB, Bottom in LR)
+function buildConditionHandleMap(graph: FlowGraph): Map<string, 'yes' | 'no'> {
   const map = new Map<string, 'yes' | 'no'>();
-  // In TB branches spread horizontally → compare X; in LR they spread vertically → compare Y
-  const axis = direction === 'LR' ? 'y' : 'x';
-
-  for (const node of graph.nodes) {
-    if (node.type !== 'condition') continue;
-    const outEdges = graph.edges.filter(e => e.from === node.id);
-    if (outEdges.length !== 2) continue;
-
-    const [a, b] = outEdges;
-    const aVal = positions[a.to]?.[axis] ?? 0;
-    const bVal = positions[b.to]?.[axis] ?? 0;
-
-    const firstEdge = aVal <= bVal ? a : b;   // smaller value
-    const secondEdge = aVal <= bVal ? b : a;  // larger value
-    if (direction === 'TB') {
-      // TB: left branch (smaller x) → 'no' (Left handle), right branch (larger x) → 'yes' (Right handle)
-      map.set(`${firstEdge.from}→${firstEdge.to}`, 'no');
-      map.set(`${secondEdge.from}→${secondEdge.to}`, 'yes');
-    } else {
-      // LR: top branch (smaller y) → 'yes' (Top handle), bottom branch (larger y) → 'no' (Bottom handle)
-      map.set(`${firstEdge.from}→${firstEdge.to}`, 'yes');
-      map.set(`${secondEdge.from}→${secondEdge.to}`, 'no');
+  for (const edge of graph.edges) {
+    const label = edge.label?.toLowerCase();
+    if (label === 'yes' || label === 'no') {
+      map.set(`${edge.from}→${edge.to}`, label);
     }
   }
-
   return map;
 }
 
@@ -99,7 +88,7 @@ function transformToReactFlow(
   direction: LayoutDirection
 ): { nodes: Node[]; edges: Edge[] } {
   const positions = computeLayout(graph.nodes, graph.edges, direction);
-  const handleMap = buildConditionHandleMap(graph, positions, direction);
+  const handleMap = buildConditionHandleMap(graph);
 
   const nodes: Node[] = graph.nodes.map(node => ({
     id: node.id,
