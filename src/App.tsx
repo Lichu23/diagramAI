@@ -119,8 +119,11 @@ function App() {
   };
 
   const handleNodeLabelChange = (id: string, label: string) => {
-    undoRedo.push({ nodes, edges, rawGraph, prompt });
     updateNodeLabel(id, label);
+    const updatedNodes = nodes.map(n =>
+      n.id === id ? { ...n, data: { ...n.data, label } } : n
+    );
+    undoRedo.push({ nodes: updatedNodes, edges, rawGraph, prompt });
   };
 
   const handleSave = () => {
