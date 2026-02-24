@@ -71,11 +71,11 @@ export function PromptBar({
       {/* Preset chips — visible only when canvas is empty */}
       {!hasNodes && !loading && (
         <div className="flex flex-wrap gap-2 mb-3">
-          {SUGGESTIONS.map(s => (
+          {SUGGESTIONS.map((s, i) => (
             <button
               key={s.label}
               onClick={() => { onPromptChange(s.prompt); onGenerate(s.prompt); }}
-              className="cursor-pointer px-3 py-1 text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-500 rounded-full transition-colors"
+              className={`cursor-pointer px-3 py-1 text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-500 rounded-full transition-colors${i >= 2 ? ' hidden sm:inline-flex items-center' : ''}`}
             >
               {s.label}
             </button>
@@ -84,7 +84,7 @@ export function PromptBar({
       )}
 
       {/* Input row */}
-      <div className="flex items-end gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-3">
         <textarea
           ref={textareaRef}
           rows={2}
@@ -101,16 +101,16 @@ export function PromptBar({
           }}
           disabled={loading}
         />
-        <div className="flex flex-col items-end gap-1 shrink-0">
+        <div className="flex flex-col items-stretch sm:items-end gap-1 shrink-0">
           <button
             onClick={handleGenerate}
             disabled={!prompt.trim() || loading}
-            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
+            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2"
           >
             <Send size={14} />
             {loading ? 'Generating…' : 'Generate'}
           </button>
-          <span className="text-xs text-gray-600">Ctrl+Enter</span>
+          <span className="hidden sm:block text-xs text-gray-600 text-right">Ctrl+Enter</span>
         </div>
       </div>
     </div>
