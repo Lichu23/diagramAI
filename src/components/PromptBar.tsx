@@ -75,7 +75,7 @@ export function PromptBar({
             <button
               key={s.label}
               onClick={() => { onPromptChange(s.prompt); onGenerate(s.prompt); }}
-              className="px-3 py-1 text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-500 rounded-full transition-colors"
+              className="cursor-pointer px-3 py-1 text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-500 rounded-full transition-colors"
             >
               {s.label}
             </button>
