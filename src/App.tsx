@@ -54,8 +54,10 @@ function App() {
       if (!raw) return;
       const session = JSON.parse(raw) as FlowSnapshot;
       if (session.nodes?.length > 0) {
-        restore(session.nodes, session.edges, session.rawGraph ?? undefined);
-        if (session.prompt) setPrompt(session.prompt);
+        setTimeout(() => {
+          restore(session.nodes, session.edges, session.rawGraph ?? undefined);
+          if (session.prompt) setPrompt(session.prompt);
+        }, 0);
       }
     } catch {
       // Corrupted session — ignore
